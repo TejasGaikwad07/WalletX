@@ -3,7 +3,7 @@
 ```jsx  
 git clone (https://github.com/TejasGaikwad07/WalletX.git)
 ```
- 
+  
 - npm install
 - Run postgres either locally or on the cloud (neon.tech)  
  
