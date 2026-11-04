@@ -13,7 +13,9 @@ export const authOptions = {
           // TODO: User credentials type from next-aut
           async authorize(credentials: any) {
             // Do zod validation, OTP validation here
-            const hashedPassword = await bcrypt.hash(credentials.password, 10);
+            if (!credentials?.phone || !credentials?.password) {
+                return null;
+            }
             const existingUser = await db.user.findFirst({
                 where: {
                     number: credentials.phone
@@ -33,10 +35,15 @@ export const authOptions = {
             }
 
             try {
+                // Only hash when actually creating a user; the nested create makes user + balance one transaction
+                const hashedPassword = await bcrypt.hash(credentials.password, 10);
                 const user = await db.user.create({
                     data: {
                         number: credentials.phone,
-                        password: hashedPassword
+                        password: hashedPassword,
+                        Balance: {
+                            create: { amount: 0, locked: 0 }
+                        }
                     }
                 });
             
