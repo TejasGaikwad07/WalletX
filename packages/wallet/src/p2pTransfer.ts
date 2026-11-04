@@ -6,7 +6,11 @@ export type WalletErrorCode =
     | "RECIPIENT_NOT_FOUND"
     | "SELF_TRANSFER"
     | "NO_BALANCE"
-    | "INSUFFICIENT_FUNDS";
+    | "INSUFFICIENT_FUNDS"
+    | "INVALID_PHONE"
+    | "PHONE_TAKEN"
+    | "PHONE_ALREADY_SET"
+    | "UNVERIFIED_EMAIL";
 
 export class WalletError extends Error {
     constructor(public readonly code: WalletErrorCode, message: string) {

@@ -7,9 +7,10 @@ export async function resetDb() {
 }
 
 export async function createUser(number: string, balance: number) {
-    return prisma.user.create({
+    const user = await prisma.user.create({
         data: { number, password: "x", Balance: { create: { amount: balance, locked: 0 } } },
     });
+    return { ...user, number };
 }
 
 export async function balanceOf(userId: number) {
