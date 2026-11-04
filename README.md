@@ -64,6 +64,24 @@ cd apps/user-app && npm run dev        # http://localhost:3001
 cd apps/bank-webhook && npm run dev    # http://localhost:3003
 ```
 
+### Google sign-in (optional)
+
+Phone + password login works without any Google setup. To also enable "Sign in with Google":
+
+1. Open the [Google Cloud Console](https://console.cloud.google.com/), create or pick a project, then go to **APIs & Services -> OAuth consent screen** and configure it (External, add yourself as a test user).
+2. Go to **APIs & Services -> Credentials -> Create credentials -> OAuth client ID**, application type **Web application**.
+3. Add the authorized redirect URI `http://localhost:3001/api/auth/callback/google` (use your real origin in production).
+4. Copy the client ID and secret into `apps/user-app/.env`:
+
+   ```
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   ```
+
+   Keep `NEXTAUTH_URL` and `JWT_SECRET` set as in `.env.example`. Never commit `.env`.
+
+On first Google sign-in the user is found (or created) by email, with a zero `Balance` row created in the same transaction. A Google user has no phone number yet, so they must add one on `/profile` before they can send or receive P2P transfers; `/p2p` says so until they do. Only verified Google emails are accepted. Signing in with Google as an email that already exists links to that account.
+
 Log in with phone `1111111111`, password `alice` (see `packages/db/prisma/seed.ts`). `2222222222` / `bob` is also seeded, so you can send money between them at `/p2p`.
 
 To call the webhook by hand, sign the exact body you send:
@@ -93,6 +111,7 @@ What is covered:
 - duplicate idempotency key (money moves once), including 5 concurrent requests with one key
 - two parallel transfers that would together overdraw (only one succeeds)
 - opposing simultaneous transfers (no deadlock)
+- Google users: new, returning, linked by existing email, unverified email rejected, concurrent first sign-ins, phone validation, phone uniqueness (including a race for one number)
 - webhook replay and concurrent replays (credit once), bad or missing signature, invalid payload, amount mismatch
 
 GitHub Actions (`.github/workflows/ci.yml`) starts a Postgres service, runs the migrations and the tests on every push and pull request.
@@ -111,6 +130,7 @@ GitHub Actions (`.github/workflows/ci.yml`) starts a Postgres service, runs the 
 - `packages/wallet`: the locked, idempotent `p2pTransfer` function.
 - The `/p2p` page, server action and transfer list in user-app.
 - Bank webhook rewrite: zod validation, HMAC signature check, atomic once-only credit.
+- Google sign-in: `GoogleProvider` next to the credentials login, `findOrCreateGoogleUser` / `setPhoneNumber` in `packages/wallet` (testable without calling Google), the `/profile` phone step, and a migration making `User.number` and `User.password` optional (Google users have neither at first; the unique index on `number` stays, since Postgres allows many NULLs).
 - Auth fix: hash the password only when creating a user, and create the `Balance` row together with the user.
 - The Jest integration test suite and the CI workflow.
 - This README.
@@ -119,5 +139,6 @@ GitHub Actions (`.github/workflows/ci.yml`) starts a Postgres service, runs the 
 
 - The "Add Money" card on `/transfer` is still the template's mock: it only redirects to the bank's website and does not create an `OnRampTransaction`. The webhook is exercised by the tests and `curl`, not by an end-to-end bank flow.
 - `merchant-app` is still essentially the template skeleton.
+- The Google sign-in redirect itself (the call to Google) is not covered by automated tests; only the user lookup/creation logic is.
 - Login does zero input validation beyond presence checks, and signing in with an unknown phone number creates an account (template behavior).
 - There is no deployment in this repo: no AWS Lambda, S3 or other cloud infrastructure code. It runs locally and in CI only.

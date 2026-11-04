@@ -1,8 +1,18 @@
 import prisma from "@repo/db/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../lib/auth";
+import Link from "next/link";
+import { Card } from "@repo/ui/card";
 import { P2pForm } from "../../../components/P2pForm";
 import { P2pTransfers } from "../../../components/P2pTransfers";
+
+async function getMyNumber() {
+    const session = await getServerSession(authOptions);
+    const userId = Number(session?.user?.id);
+    if (!userId) return null;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    return user?.number ?? null;
+}
 
 async function getTransfers() {
     const session = await getServerSession(authOptions);
@@ -18,7 +28,7 @@ async function getTransfers() {
         return {
             id: t.id,
             direction: sent ? "sent" as const : "received" as const,
-            counterpartyNumber: sent ? t.toUser.number : t.fromUser.number,
+            counterpartyNumber: (sent ? t.toUser.number : t.fromUser.number) ?? "unknown",
             amount: t.amount,
             time: t.createdAt,
         };
@@ -27,6 +37,7 @@ async function getTransfers() {
 
 export default async function() {
     const transfers = await getTransfers();
+    const myNumber = await getMyNumber();
 
     return <div className="w-screen">
         <div className="text-4xl text-[#6a51a6] pt-8 mb-8 font-bold">
@@ -34,7 +45,14 @@ export default async function() {
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 p-4">
             <div>
-                <P2pForm />
+                {myNumber ? <P2pForm /> : <Card title="Add a phone number first">
+                    <div className="text-center pb-4 pt-4">
+                        You need a phone number before you can send or receive money, because transfers are addressed by phone number.
+                        <div className="pt-4">
+                            <Link href="/profile" className="text-[#6a51a6] font-bold underline">Add your phone number</Link>
+                        </div>
+                    </div>
+                </Card>}
             </div>
             <div>
                 <P2pTransfers transfers={transfers} />
