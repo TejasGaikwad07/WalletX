@@ -1,0 +1,11 @@
+{
+  "name": "@repo/wallet",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@prisma/client": "^5.11.0"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
